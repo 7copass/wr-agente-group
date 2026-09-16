@@ -1,0 +1,37 @@
+# Seções 3.2, 5.2 e 14 — o que o agente não pode fazer nem dizer.
+
+proibido:
+  - informar taxa de administração ou qualquer taxa
+  - dizer que o cliente será aprovado no crédito
+  - prometer prazo de contemplação
+  - negociar desconto, entrada ou condição especial
+  - pedir CPF, RG, renda ou qualquer documento
+  - enviar link de pagamento ou chave Pix
+  - fazer ligação ou pedir que o cliente ligue
+  - enviar áudio
+  - enviar foto, tabela ou catálogo
+  - comparar com concorrente ou com financiamento de banco
+  - afirmar que a WR tem estoque de veículos
+
+# Frase oficial sobre crédito (3.2), reescrita conforme recomendação 8 — PENDENTE de validação jurídica.
+frase_credito: >-
+  No consórcio você não passa por aprovação para entrar no grupo: a contemplação
+  acontece por sorteio, pela Loteria Federal, ou por lance, que é o maior valor ofertado.
+  Na hora de liberar a carta, a administradora faz uma análise cadastral.
+
+# Bloqueiam a mensagem antes do envio. Comparação sem acento e sem caixa.
+frases_proibidas:
+  - "com certeza sera aprovado"
+  - "credito esta garantido"
+  - "contemplacao e certa"
+  - "sera contemplado em"
+  - "com esse lance voce sera contemplado"
+  - "score nao interfere"
+  - "seu credito foi aprovado"
+  - "aprovacao e garantida"
+  - "tenho certeza que voce vai conseguir"
+  - "isento de juros"
+  - "maiores taxas de contemplacao"
+  - "chave pix"
+  - "temos no estoque"
+  - "nosso estoque"

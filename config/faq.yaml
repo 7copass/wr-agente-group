@@ -1,0 +1,124 @@
+# Base de conhecimento — seção 8 do briefing, já com as correções decididas:
+# a WR não tem estoque de veículo (8.5 reescrita como redirecionamento) e
+# o agente só cita valor que esteja em ofertas.yaml.
+#
+# PENDÊNCIA CRÍTICA (Wallace): o endereço aparece de três formas no briefing
+# (Av. Jasmim 941 / Av. Marechal Rondon 2252 / 2260). Enquanto estiver «a confirmar»
+# o guardrail bloqueia a resposta e escala — o agente não inventa endereço.
+
+empresa:
+  nome_fantasia: WR Representações
+  razao_social: W L DE OLIVEIRA COMERCIO DE VEÍCULOS LTDA
+  cnpj: 57.540.446/0001-26
+  papel: representante autorizada — não é concessionária
+  administradora: Fiat Consórcios
+  endereco: "«a confirmar»"
+  cidade: Santarém/PA
+  instagram: "@grupowr_administradoras"
+  telefone: "(93) 99223-6367"
+  atende: Santarém, todo o Pará e clientes de qualquer cidade, 100% pelo WhatsApp
+
+categorias:
+  - nome: Localização e estrutura
+    itens:
+      - pergunta: Onde fica a loja? Qual o endereço?
+        resposta: >-
+          Nossa loja fica em Santarém, no Pará. Se você preferir, posso te passar
+          a localização pelo mapa.
+      - pergunta: Vocês atendem quem é de outra cidade (Belém, Macapá, Itaituba, Manaus)?
+        resposta: >-
+          Atendemos sim! Todo o processo pode ser feito por aqui mesmo, pelo WhatsApp.
+          Morar em outra cidade não muda o plano nem o valor da parcela.
+      - pergunta: Vocês são concessionária?
+        resposta: >-
+          Não, somos representantes de consórcio. A gente cuida do seu plano, e o veículo
+          você escolhe na concessionária depois da contemplação.
+      - pergunta: Precisa ir até a loja ou faz tudo pelo WhatsApp?
+        resposta: >-
+          Dá para fazer tudo por aqui. Se você quiser conhecer a loja em Santarém,
+          também é bem-vindo.
+
+  - nome: Como funciona o consórcio
+    itens:
+      - pergunta: Como funciona o consórcio?
+        resposta: >-
+          Você entra num grupo e paga uma parcela por mês. A cada assembleia, alguns
+          participantes são contemplados por sorteio ou por lance. Quando você é
+          contemplado, recebe a carta de crédito e usa para comprar o veículo.
+      - pergunta: O que é carta de crédito?
+        resposta: >-
+          É o valor que fica disponível para você comprar o bem depois da contemplação.
+          Ela faz parte do consórcio, não é vendida separadamente.
+      - pergunta: Como funciona o lance?
+        resposta: >-
+          O lance é um valor que você oferta para tentar ser contemplado antes. Aqui dá
+          para usar parte do próprio crédito como lance embutido. Não existe percentual
+          que garanta contemplação, isso depende das ofertas da assembleia.
+      - pergunta: Em quanto tempo eu sou contemplado?
+        resposta: >-
+          Não dá para cravar prazo. A contemplação acontece por sorteio ou por lance,
+          conforme as regras do grupo.
+      - pergunta: Vocês têm consórcio contemplado?
+        resposta: ESCALAR
+      - pergunta: Qual a diferença para financiamento?
+        resposta: >-
+          Trabalhamos com as duas opções. No consórcio você planeja e é contemplado por
+          sorteio ou lance. O financiamento depende de análise da instituição financeira.
+          Qual das duas faz mais sentido para você?
+
+  - nome: Crédito e aprovação
+    itens:
+      - pergunta: Quais as chances de eu ser aprovado? Meu nome está negativado, tenho score baixo.
+        resposta: USAR_FRASE_CREDITO
+      - pergunta: Quais documentos precisa?
+        resposta: >-
+          Quem cuida dessa parte é o consultor, no momento certo. Por aqui eu não peço
+          documento nenhum.
+      - pergunta: Sou autônomo, MEI ou aposentado, consigo?
+        resposta: ESCALAR
+      - pergunta: Posso usar o score da minha esposa?
+        resposta: ESCALAR
+
+  - nome: Veículo
+    itens:
+      - pergunta: Vocês trabalham com qual marca? Tem outro modelo?
+        resposta: >-
+          O consórcio é pelo valor da carta, não pelo modelo. Você escolhe o veículo na
+          hora da contemplação. Me diz qual você tem em mente que eu vejo qual carta encaixa.
+      - pergunta: Vocês têm moto, caminhão ou imóvel?
+        resposta: >-
+          Trabalhamos com cartas para outros bens também. Me diz o que você procura e
+          uma ideia de valor que eu verifico a carta certa.
+      - pergunta: Qual o estoque? Tem essa cor, esse ano? Manda foto.
+        resposta: >-
+          A gente não trabalha com pátio de veículo. O que eu cuido aqui é da carta de
+          crédito; o carro você escolhe na concessionária depois de contemplado.
+      - pergunta: Posso dar meu carro usado como entrada ou lance?
+        resposta: >-
+          Dá para avaliar seu veículo como parte do lance. Me passa modelo, ano e
+          quilometragem que eu registro para o consultor avaliar.
+      - pergunta: Aceita carta de crédito de outra administradora?
+        resposta: ESCALAR
+
+  - nome: Confiança e objeções
+    itens:
+      - pergunta: É confiável? Aqui tem muito golpe.
+        resposta: >-
+          Entendo a preocupação, é justa. Somos a WR Representações, ficamos em Santarém
+          e você pode conferir nosso Instagram @grupowr_administradoras. Não pedimos
+          documento nem pagamento por aqui.
+      - pergunta: Não quero consórcio.
+        resposta: >-
+          Sem problema. Me conta o que você está buscando que eu vejo se alguma outra
+          opção faz sentido, sem compromisso.
+      - pergunta: Vou pensar, deixa para mais para frente.
+        resposta: >-
+          Tranquilo. Só para eu entender e não te incomodar: é questão de orçamento,
+          do momento da compra, ou você ainda está comparando?
+      - pergunta: Você é um robô?
+        resposta: >-
+          Sou sim, sou o Alex, assistente virtual da WR 😊 Qualquer coisa eu te passo
+          para um consultor de verdade.
+      - pergunta: Me liga / não posso falar agora.
+        resposta: >-
+          Claro. Qual o melhor horário para o consultor te chamar? Eu já deixo anotado.

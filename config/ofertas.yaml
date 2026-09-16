@@ -1,0 +1,38 @@
+# ÚNICA fonte de valores que o agente pode citar (seção 4.3).
+# Qualquer número em R$ que não esteja aqui é BLOQUEADO pelo guardrail antes de sair.
+#
+# PENDÊNCIA (Wallace): confirmar se as linhas seguem vigentes e até quando.
+# PENDÊNCIA: a tabela diz 80k/80x = R$ 1.032,50 mas as conversas citam R$ 1.132,50. Confirmar.
+# PENDÊNCIA: existe 120.000 em 100x? Só veio a linha de 80x.
+vigencia: "«a confirmar»"
+piso_parcela: null            # "defina o piso real" ficou vazio no briefing
+lance_embutido_max_pct: 25
+
+planos:
+  - credito: 50000
+    prazo: 80
+    parcela: 645.32
+  - credito: 50000
+    prazo: 100
+    parcela: 454.93
+  - credito: 80000
+    prazo: 80
+    parcela: 1032.50
+  - credito: 80000
+    prazo: 100
+    parcela: 727.89
+  - credito: 100000
+    prazo: 80
+    parcela: 1290.63
+  - credito: 100000
+    prazo: 100
+    parcela: 909.86
+  - credito: 120000
+    prazo: 80
+    parcela: 1548.76
+
+percentuais_permitidos: [25]
+
+campanhas_vigentes:
+  - "Frete grátis"
+  - "Tanque cheio"

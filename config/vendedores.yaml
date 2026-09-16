@@ -1,0 +1,19 @@
+# PENDÊNCIA: hoje a conta 12 só tem 3 usuários, todos administradores, e nenhum
+# é vendedor. Quando o Wallace criar os vendedores no Chatwoot, listar os ids aqui.
+handoff:
+  responsavel_padrao: 105       # Wallace — provisório
+  rodizio: []                   # ids dos vendedores; vazio = usa o padrão
+  sla_redistribuir_min: 5
+  sla_reassumir_min: 10
+
+expediente:
+  timezone: America/Sao_Paulo
+  dias_uteis: [1, 2, 3, 4, 5]
+  abre: "09:00"
+  fecha: "17:00"
+
+followup:
+  janela_inicio: "08:00"
+  janela_fim: "20:00"
+  # Só para quem já respondeu ao menos uma vez (decisão do usuário).
+  tentativas_min: [120, 1440, 5760, 10080]

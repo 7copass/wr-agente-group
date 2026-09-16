@@ -1,0 +1,30 @@
+{
+  "name": "agente-alex",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "simular": "tsx scripts/simular.ts",
+    "setup:chatwoot": "tsx scripts/setup-chatwoot.ts"
+  },
+  "dependencies": {
+    "@vercel/functions": "^3.9.8",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "openai": "^4.77.0",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
