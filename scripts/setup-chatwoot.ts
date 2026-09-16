@@ -106,8 +106,8 @@ async function main() {
       await api(`/webhooks/${existente.id}`, { method: 'PATCH', body: corpo });
       console.log(`webhook ${existente.id}: atualizado para ${base}/api/webhook (message_created${inbox ? `, inbox ${inbox}` : ''})`);
     } else {
-      const criado = await api<Webhook | { payload: Webhook }>('/webhooks', { method: 'POST', body: corpo });
-      const id = 'payload' in criado ? criado.payload.id : criado.id;
+      const criado = await api<Record<string, any>>('/webhooks', { method: 'POST', body: corpo });
+      const id = criado?.payload?.webhook?.id ?? criado?.payload?.id ?? criado?.id;
       console.log(`webhook ${id}: criado para ${base}/api/webhook (message_created${inbox ? `, inbox ${inbox}` : ''})`);
     }
   }
