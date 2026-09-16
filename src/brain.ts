@@ -1,4 +1,5 @@
-import OpenAI from 'openai';
+// Import nomeado: o default quebra quando a ferramenta de build resolve os tipos CJS do pacote.
+import { OpenAI } from 'openai';
 import YAML from 'yaml';
 import { env } from './env.js';
 import { persona, ofertas, limites, faq, vendedores } from './config.js';
