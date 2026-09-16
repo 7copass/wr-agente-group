@@ -5,6 +5,7 @@ import { env } from './env.js';
 import { persona, ofertas, limites, faq, vendedores } from './config.js';
 import { CAMPOS_HANDOFF, faltando, type Estado } from './state.js';
 import { valoresCitadosPelo } from './guardrails.js';
+import type { Turno } from './historico.js';
 
 const openai = new OpenAI({ apiKey: env.openai.apiKey });
 
@@ -15,7 +16,7 @@ export interface Resposta {
   escalar: { motivo: string } | null;
 }
 
-export interface Turno { autor: 'cliente' | 'alex' | 'vendedor'; texto: string }
+export type { Turno };
 
 /** Maior valor entre 200 e 10.000 que o cliente citou por último: é a parcela que ele diz que cabe. */
 export function orcamentoDoCliente(historico: Turno[], estado: Estado): number | null {

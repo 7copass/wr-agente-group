@@ -19,7 +19,11 @@ WhatsApp ─ Evolution API (ou QuePasa) ─ Chatwoot ─ webhook ─► serviço
                                                                     └─► OpenAI
 ```
 
-- O serviço roda na Vercel, como funções (`api/webhook.ts`, `api/health.ts`), e é o agent_bot da inbox.
+- O serviço roda na Vercel, como funções (`api/webhook.ts`, `api/health.ts`).
+- **Eventos chegam por webhook da conta, não por bot ligado à inbox.** Inbox com bot faz o
+  Chatwoot criar conversas como pendentes, o que esconderia leads reais dos vendedores
+  (hoje a inbox 43 tem 878 abertas e 1 pendente). O bot Alex existe só para dar identidade e
+  token de envio; tokens de bot enviam sem estar ligados (o bot 25 já faz isso na 43).
 - Cada evento é uma execução isolada. O debounce não usa memória: a execução espera
   `DEBOUNCE_MS` e só responde se a mensagem que a disparou ainda for a última do cliente.
 - O trabalho continua depois do 200 ao Chatwoot via `waitUntil`.
@@ -42,6 +46,7 @@ WhatsApp ─ Evolution API (ou QuePasa) ─ Chatwoot ─ webhook ─► serviço
 | `src/handoff.ts` | resumo em nota privada, status e atribuição |
 | `src/expediente.ts` | horário local de Santarém (a inbox está em UTC) |
 | `src/webhook.ts` | orquestra: autenticação, filtro, debounce sem estado, modelo, guardrail, envio |
+| `src/historico.ts` | converte mensagens do Chatwoot em turnos; `/reiniciar` |
 | `src/telefone.ts` | comparação de números BR (+55 e nono dígito) para a allowlist |
 | `api/` | funções da Vercel |
 | `src/index.ts` | servidor local só para desenvolvimento |
@@ -73,7 +78,9 @@ WhatsApp ─ Evolution API (ou QuePasa) ─ Chatwoot ─ webhook ─► serviço
     `status_agente = aguardando_humano` e o Alex para.
 12. **Bot dedicado.** O agent_bot 25 já envia mensagens por outra integração; o Alex usa um bot próprio, criado pelo `setup:chatwoot`.
 13. **Handoff abre a conversa.** Com bot na inbox a conversa nasce pendente e fica invisível aos vendedores; o repasse muda para aberta.
-14. **Teste.** Números do usuário (91) e do Wallace (93). `ALLOWED_NUMBERS` restringe a quem o Alex responde,
+14. **Teste na inbox de produção (43)**, sem inbox separada, a pedido do usuário. A allowlist é
+    verificada antes de qualquer escrita ou espera: conversas de outros números não são tocadas.
+    `/reiniciar` zera a qualificação para repetir o teste. Números do usuário (91) e do Wallace (93). `ALLOWED_NUMBERS` restringe a quem o Alex responde,
     para não responder contatos pessoais.
 
 ## Configurações com placeholder

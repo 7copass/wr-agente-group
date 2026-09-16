@@ -19,15 +19,18 @@ npm run dev            # servidor em http://localhost:3000/api/health
 2. Em *Settings → Environment Variables*, cadastre todas as variáveis do `.env.example`
    (`CHATWOOT_BOT_TOKEN` pode ficar vazio no primeiro deploy).
 3. Faça o deploy e confira `https://SEU-PROJETO.vercel.app/api/health`.
-4. Com a URL em mãos, crie o bot e aponte o webhook:
+4. Com a URL em mãos, crie o bot e o webhook:
    ```bash
    WEBHOOK_URL=https://SEU-PROJETO.vercel.app npm run setup:chatwoot
    ```
-   O script cria atributos, etiquetas e o bot **Alex**, e imprime o token dele.
-5. Coloque esse token em `CHATWOOT_BOT_TOKEN` na Vercel e faça redeploy.
-6. No Chatwoot, ligue o bot Alex **só na inbox de teste**
-   (Configurações → Caixas de entrada → inbox → Bot) e ponha o id dela em `CHATWOOT_INBOX_IDS`.
-7. `/api/health` deve mostrar `"botConfigurado": true`.
+   O script cria atributos, etiquetas, o bot **Alex** e um **webhook da conta** (`message_created`),
+   e imprime o token do bot.
+5. Na Vercel, cadastre `CHATWOOT_BOT_TOKEN` com esse token e `CHATWOOT_INBOX_IDS`, e faça redeploy.
+6. `/api/health` deve mostrar `"botConfigurado": true`.
+
+**Não ligue o bot Alex em nenhuma inbox.** Inbox com bot faz o Chatwoot criar toda conversa
+nova como *pendente*, e os leads reais somem da tela dos vendedores. O Alex recebe os eventos
+pelo webhook da conta e envia com o token do bot, sem precisar estar ligado.
 
 ### Limites da Vercel que importam aqui
 
@@ -40,6 +43,8 @@ npm run dev            # servidor em http://localhost:3000/api/health
 ## Modo teste
 
 - `ALLOWED_NUMBERS` — o Alex só responde esses números. Aceita com ou sem +55 e nono dígito.
+  Conversas de outros números não são tocadas: nem atributo, nem etiqueta, nem mensagem.
+- `/reiniciar` — enviado por um número da allowlist, zera a qualificação e recomeça o teste.
 - `DRY_RUN=true` — processa tudo, mas só loga a resposta.
 
 ## Onde mexer sem programar

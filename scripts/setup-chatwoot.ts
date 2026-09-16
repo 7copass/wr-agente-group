@@ -1,7 +1,7 @@
 /**
  * Prepara a conta do Chatwoot para o Alex. Idempotente: pode rodar quantas vezes quiser.
  *   npm run setup:chatwoot
- * Com WEBHOOK_URL definido, também aponta o agent_bot para o serviço.
+ * Com WEBHOOK_URL definido, também cria o bot Alex (sem inbox) e o webhook da conta.
  */
 import { env } from '../src/env.js';
 
@@ -74,26 +74,42 @@ async function main() {
     console.log(`etiqueta ${titulo}: criada`);
   }
 
-  // Bot dedicado. O bot 25 já é usado por outra integração: nunca mexer nele.
-  const webhook = process.env.WEBHOOK_URL;
-  if (webhook) {
-    const url = `${webhook.replace(/\/+$/, '')}/api/webhook?token=${env.webhookSecret}`;
-    const bots = await api<{ id: number; name: string; access_token?: string }[]>('/agent_bots');
-    let alex = bots.find((b) => b.name === 'Alex');
-    if (alex) {
-      await api(`/agent_bots/${alex.id}`, { method: 'PATCH', body: JSON.stringify({ outgoing_url: url }) });
-      console.log(`agent_bot Alex (${alex.id}): apontado para ${webhook}/api/webhook`);
-    } else {
-      alex = await api<{ id: number; name: string; access_token?: string }>('/agent_bots', {
-        method: 'POST',
-        body: JSON.stringify({ name: 'Alex', description: 'Assistente virtual WR Representações', outgoing_url: url }),
-      });
-      console.log(`agent_bot Alex (${alex.id}): criado e apontado para ${webhook}/api/webhook`);
-    }
-    if (alex.access_token) console.log(`coloque no .env -> CHATWOOT_BOT_TOKEN=${alex.access_token}`);
-    console.log('falta ligar o bot à inbox de TESTE: Configurações > Caixas de entrada > (inbox) > Bot');
+  const base = process.env.WEBHOOK_URL?.replace(/\/+$/, '');
+  if (!base) {
+    console.log('WEBHOOK_URL não definido: bot e webhook não foram configurados');
   } else {
-    console.log('WEBHOOK_URL não definido: bot Alex não foi criado (faça quando o serviço tiver URL pública)');
+    // Bot Alex: só a identidade e o token para enviar mensagens.
+    // NÃO é ligado a nenhuma inbox. Inbox com bot faz o Chatwoot criar toda conversa nova
+    // como "pendente", escondendo leads reais dos vendedores. Nunca mexer no bot 25.
+    type Bot = { id: number; name: string; access_token?: string };
+    const bots = await api<Bot[]>('/agent_bots');
+    let alex = bots.find((b) => b.name === 'Alex');
+    if (!alex) {
+      alex = await api<Bot>('/agent_bots', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Alex', description: 'Assistente virtual WR Representações' }),
+      });
+      console.log(`agent_bot Alex (${alex.id}): criado, sem inbox`);
+    } else {
+      console.log(`agent_bot Alex (${alex.id}): já existe`);
+    }
+    if (alex.access_token) console.log(`CHATWOOT_BOT_TOKEN=${alex.access_token}`);
+
+    // Eventos chegam por webhook da conta, que não altera o comportamento das conversas.
+    const inbox = env.chatwoot.inboxIds.length === 1 ? Number(env.chatwoot.inboxIds[0]) : undefined;
+    const url = `${base}/api/webhook?token=${env.webhookSecret}`;
+    const corpo = JSON.stringify({ webhook: { url, subscriptions: ['message_created'], ...(inbox ? { inbox_id: inbox } : {}) } });
+    type Webhook = { id: number; url: string };
+    const { payload } = await api<{ payload: { webhooks: Webhook[] } }>('/webhooks');
+    const existente = payload.webhooks.find((w) => w.url.startsWith(`${base}/api/webhook`));
+    if (existente) {
+      await api(`/webhooks/${existente.id}`, { method: 'PATCH', body: corpo });
+      console.log(`webhook ${existente.id}: atualizado para ${base}/api/webhook (message_created${inbox ? `, inbox ${inbox}` : ''})`);
+    } else {
+      const criado = await api<Webhook | { payload: Webhook }>('/webhooks', { method: 'POST', body: corpo });
+      const id = 'payload' in criado ? criado.payload.id : criado.id;
+      console.log(`webhook ${id}: criado para ${base}/api/webhook (message_created${inbox ? `, inbox ${inbox}` : ''})`);
+    }
   }
 
   console.log('\nPendências que este script NÃO faz sozinho, para não mexer na produção:');
