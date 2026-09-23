@@ -13,6 +13,7 @@ import { AVISO_BLOQUEIO, AVISO_BLOQUEIO_FORA, textoDeRepasse } from './mensagens
 import { numeroPermitido } from './telefone.js';
 import { desdeUltimoReinicio, ehEntrada, ehReinicio, ehSaida, turnoDe, type Turno } from './historico.js';
 import { TAG_ATENDIMENTO_IA, comEtiqueta } from './etiquetas.js';
+import { decidirControleIA } from './controle-ia.js';
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -43,22 +44,21 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[]): Prom
   const conversaId = conversa.id;
   const estado = lerEstado(conversa);
 
-  if (estado.status_agente === 'aguardando_humano' || estado.status_agente === 'encerrado') {
-    log.info(`conversa ${conversaId} ignorada: status ${estado.status_agente}`);
+  // A etiqueta atendimento_ia é o controle manual do time, conferido a cada mensagem — não
+  // só na primeira. Sem ela o Alex não responde, mesmo que já tenha parado antes por outro
+  // motivo; com ela, ele responde, inclusive retomando uma conversa que já tinha soltado.
+  const etiquetasAtuais = await chatwoot.listarEtiquetas(conversaId);
+  const decisao = decidirControleIA(estado.status_agente, etiquetasAtuais);
+
+  if (!decisao.seguir) {
+    if (decisao.registrarParada) await pararIA(conversaId);
+    log.info(`conversa ${conversaId} ignorada: sem a etiqueta ${TAG_ATENDIMENTO_IA} (status ${estado.status_agente ?? '—'})`);
     return;
   }
-
-  // A etiqueta atendimento_ia é o controle manual do time: aplicada na primeira mensagem,
-  // sua ausência depois disso significa que alguém tirou e o Alex deve parar.
-  const etiquetasAtuais = await chatwoot.listarEtiquetas(conversaId);
-  if (!estado.status_agente) {
+  if (decisao.aplicarTag) await chatwoot.aplicarEtiquetas(conversaId, comEtiqueta(etiquetasAtuais, TAG_ATENDIMENTO_IA));
+  if (decisao.ativar) {
     await chatwoot.gravarAtributos(conversaId, { status_agente: 'ativo' });
-    const comTag = comEtiqueta(etiquetasAtuais, TAG_ATENDIMENTO_IA);
-    if (comTag.length !== etiquetasAtuais.length) await chatwoot.aplicarEtiquetas(conversaId, comTag);
-  } else if (!etiquetasAtuais.includes(TAG_ATENDIMENTO_IA)) {
-    await pararIA(conversaId);
-    log.info(`conversa ${conversaId}: etiqueta ${TAG_ATENDIMENTO_IA} removida pelo time, Alex parou`);
-    return;
+    if (estado.status_agente === 'aguardando_humano') log.info(`conversa ${conversaId}: etiqueta de volta, Alex retomou`);
   }
 
   const turnos = mensagens.map(turnoDe).filter((t): t is Turno => t !== null);
