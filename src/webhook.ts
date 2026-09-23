@@ -7,6 +7,7 @@ import { responder } from './brain.js';
 import { verificarSaida, valoresCitadosPelo } from './guardrails.js';
 import { foraDoExpediente } from './expediente.js';
 import { escalar } from './handoff.js';
+import { notificarLeadQualificado } from './notificacao.js';
 import { log } from './log.js';
 import { AVISO_BLOQUEIO, AVISO_BLOQUEIO_FORA, textoDeRepasse } from './mensagens.js';
 import { numeroPermitido } from './telefone.js';
@@ -84,9 +85,13 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[]): Prom
   await enviar(conversaId, precisaHumano ? textoDeRepasse(r.resposta, fora) : r.resposta);
 
   if (precisaHumano) {
+    const qualificado = !r.escalar; // motivo automático: todos os campos obrigatórios preenchidos
     const motivo = r.escalar?.motivo ?? 'lead qualificado: todos os campos obrigatórios preenchidos';
     await escalar(conversaId, motivo, atualizado, telefone, !fora);
     log.info(`conversa ${conversaId} escalada: ${motivo}`);
+    // Só avisa o vendedor por WhatsApp quando o motivo é ter qualificado o lead, não em
+    // qualquer escalonamento (pedido de humano, guardrail etc.) — como o usuário pediu.
+    if (qualificado) await notificarLeadQualificado(atualizado, telefone, conversaId);
   }
 }
 

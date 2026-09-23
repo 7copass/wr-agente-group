@@ -47,6 +47,7 @@ WhatsApp ─ Evolution API (ou QuePasa) ─ Chatwoot ─ webhook ─► serviço
 | `src/expediente.ts` | horário local de Santarém (a inbox está em UTC) |
 | `src/webhook.ts` | orquestra: autenticação, filtro, debounce sem estado, modelo, guardrail, envio |
 | `src/historico.ts` | converte mensagens do Chatwoot em turnos; `/reiniciar` |
+| `src/notificacao.ts` | avisa o vendedor por WhatsApp quando um lead é qualificado |
 | `src/telefone.ts` | comparação de números BR (+55 e nono dígito) para a allowlist |
 | `api/` | funções da Vercel |
 | `src/index.ts` | servidor local só para desenvolvimento |
@@ -104,10 +105,31 @@ Enquanto estiverem «a confirmar», o guardrail impede o agente de usá-las e el
 | Áudio e imagem | não feito |
 | Relógio de SLA (redistribuir/reassumir) | não feito |
 | Follow-up agendado | não feito |
+| Notificação por WhatsApp ao vendedor no lead qualificado | feito (2026-09-23) |
 | Primeira mensagem distinta para anúncio x orgânico | feito (detecta o texto padrão do anúncio) |
 | Planos que cabem no orçamento calculados no código | feito |
 | Aviso de repasse sem pergunta pendente e sem "só um momento" à noite | feito, com testes |
 | Ajustes da inbox (fuso, ausência, automação 26) | não feito — manual, mexe em produção |
+
+## Decisões (2026-09-23)
+
+15. **Notificação de lead qualificado.** Assim que um lead atinge os 5 campos obrigatórios
+    (não em qualquer escalonamento — só nesse caso), o Alex manda uma mensagem de WhatsApp
+    com o resumo para `vendedores.yaml → handoff.notificar_numero`, pela mesma ponte que o
+    Chatwoot já usa para falar com os clientes (hoje o quepasa) — sem integração nova, sem
+    credencial nova. Ele reutiliza uma conversa já existente com esse número no Chatwoot; não
+    cria conversa nova, porque não há como saber o identificador exato que a ponte usa para um
+    contato novo sem arriscar mandar para o número errado.
+16. **A inbox 43 já está aberta para todo mundo** (`ALLOWED_NUMBERS` vazio em produção) — assim
+    encontrado, não uma mudança feita nesta sessão. Confirmado por evidência indireta: 10 das
+    20 conversas mais recentes tiveram resposta do Alex no mesmo dia, com handoff correto para
+    humano.
+
+## Pendência não corrigida
+
+Mensagem sem texto (só áudio ou imagem) não gera resposta: `turnoDe` descarta turnos com
+`content` vazio, e o Alex fica em silêncio. Como a inbox já está recebendo tráfego real, isso
+já pode estar acontecendo com clientes de verdade. Sinalizado para correção separada.
 
 ## Testes
 

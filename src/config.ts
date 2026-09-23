@@ -44,6 +44,8 @@ export interface Vendedores {
     rodizio: number[];
     sla_redistribuir_min: number;
     sla_reassumir_min: number;
+    /** Número que recebe WhatsApp quando um lead é qualificado. Vazio desliga a notificação. */
+    notificar_numero?: string;
   };
   expediente: { timezone: string; dias_uteis: number[]; abre: string; fecha: string };
   followup: { janela_inicio: string; janela_fim: string; tentativas_min: number[] };

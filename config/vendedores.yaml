@@ -5,6 +5,11 @@ handoff:
   rodizio: []                   # ids dos vendedores; vazio = usa o padrão
   sla_redistribuir_min: 5
   sla_reassumir_min: 10
+  # Número que recebe uma mensagem de WhatsApp (pela mesma ponte já usada pelo Chatwoot,
+  # hoje o quepasa) assim que um lead é qualificado. Precisa já existir uma conversa com
+  # esse número no Chatwoot (troque uma mensagem com o Alex uma vez) — o agente não cria
+  # conversa nova, para não arriscar mandar a notificação pro número errado.
+  notificar_numero: "93984009798"
 
 expediente:
   timezone: America/Sao_Paulo

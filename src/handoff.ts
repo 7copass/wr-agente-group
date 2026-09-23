@@ -1,4 +1,5 @@
 import { chatwoot } from './chatwoot.js';
+import { env } from './env.js';
 import { vendedores } from './config.js';
 import type { Estado } from './state.js';
 
@@ -14,7 +15,15 @@ const rotulos: Record<string, string> = {
   observacoes: 'Observações',
 };
 
-export function montarResumo(estado: Estado, telefone: string | undefined, motivo: string): string {
+export const linkDaConversa = (conversaId: number): string =>
+  `${env.chatwoot.url}/app/accounts/${env.chatwoot.accountId}/conversations/${conversaId}`;
+
+export function montarResumo(
+  estado: Estado,
+  telefone: string | undefined,
+  motivo: string,
+  linkConversa?: string,
+): string {
   const linhas = Object.entries(rotulos)
     .map(([chave, rotulo]) => {
       const v = estado[chave as keyof Estado];
@@ -27,6 +36,7 @@ export function montarResumo(estado: Estado, telefone: string | undefined, motiv
     telefone ? `- Telefone: ${telefone}` : null,
     linhas,
     `- Motivo do repasse: ${motivo}`,
+    linkConversa ? `- Conversa: ${linkConversa}` : null,
   ]
     .filter(Boolean)
     .join('\n');
@@ -52,7 +62,7 @@ export async function escalar(
   telefone: string | undefined,
   atribuir: boolean,
 ): Promise<void> {
-  await chatwoot.enviarNotaPrivada(conversaId, montarResumo(estado, telefone, motivo));
+  await chatwoot.enviarNotaPrivada(conversaId, montarResumo(estado, telefone, motivo, linkDaConversa(conversaId)));
   await chatwoot.gravarAtributos(conversaId, { status_agente: 'aguardando_humano' });
   await chatwoot.abrirConversa(conversaId);
   if (atribuir) await chatwoot.atribuir(conversaId, proximoResponsavel());

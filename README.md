@@ -55,7 +55,7 @@ pelo webhook da conta e envia com o token do bot, sem precisar estar ligado.
 | `config/faq.yaml` | dados da empresa e base de conhecimento |
 | `config/persona.yaml` | nome, tom, primeiras mensagens |
 | `config/limites.yaml` | proibições, frase de crédito, frases bloqueadas |
-| `config/vendedores.yaml` | quem recebe o lead, expediente, follow-up |
+| `config/vendedores.yaml` | quem recebe o lead, expediente, follow-up, número avisado no WhatsApp |
 
 Campos marcados «a confirmar» nunca chegam ao cliente: o Alex escala.
 Mudou um YAML? Commit e push: a Vercel publica sozinha.

@@ -83,4 +83,15 @@ export const chatwoot = {
 
   atribuir: (id: number, assigneeId: number) =>
     call(`/conversations/${id}/assignments`, { method: 'POST', body: JSON.stringify({ assignee_id: assigneeId }) }),
+
+  /** Busca por telefone/identificador. Usado para achar a conversa de WhatsApp de um número interno. */
+  buscarContatos: (consulta: string) =>
+    call<{ payload: { id: number; phone_number?: string; identifier?: string }[] }>(
+      `/contacts/search?q=${encodeURIComponent(consulta)}`,
+    ).then((r) => r.payload ?? []),
+
+  listarConversasDoContato: (contatoId: number) =>
+    call<{ payload: { id: number; inbox_id: number; status: string; created_at: number }[] }>(
+      `/contacts/${contatoId}/conversations`,
+    ).then((r) => r.payload ?? []),
 };
