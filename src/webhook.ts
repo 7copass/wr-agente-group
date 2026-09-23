@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { env } from './env.js';
 import { chatwoot, type CwConversation, type CwMessage } from './chatwoot.js';
-import { ofertas, limites } from './config.js';
+import { ofertas, limites, persona } from './config.js';
 import { CAMPOS, lerEstado, prontoParaHandoff, type Estado } from './state.js';
 import { responder } from './brain.js';
 import { verificarSaida, valoresCitadosPelo } from './guardrails.js';
@@ -11,11 +11,30 @@ import { notificarLeadQualificado } from './notificacao.js';
 import { log } from './log.js';
 import { AVISO_BLOQUEIO, AVISO_BLOQUEIO_FORA, textoDeRepasse } from './mensagens.js';
 import { numeroPermitido } from './telefone.js';
-import { desdeUltimoReinicio, ehEntrada, ehReinicio, ehSaida, turnoDe, type Turno } from './historico.js';
+import {
+  desdeUltimoReinicio,
+  ehEntrada,
+  ehMensagemDeAnuncio,
+  ehNossoBot,
+  ehReinicio,
+  ehSaida,
+  humanoFalouNosUltimos,
+  turnoDe,
+  type IdentidadeBot,
+  type Turno,
+} from './historico.js';
 import { TAG_ATENDIMENTO_IA, comEtiqueta } from './etiquetas.js';
 import { decidirControleIA } from './controle-ia.js';
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Se um humano falou com o cliente neste intervalo, ele está no comando: o Alex não retoma. */
+const MINUTOS_DE_RESPEITO_AO_HUMANO = 30;
+
+const identidadeDoBot = async (): Promise<IdentidadeBot> => ({
+  id: await chatwoot.identificarBot(),
+  nome: persona.nome,
+});
 
 export function autorizado(token: string | null | undefined): boolean {
   const esperado = Buffer.from(env.webhookSecret);
@@ -40,11 +59,11 @@ async function reiniciar(conversaId: number): Promise<void> {
   log.info(`conversa ${conversaId}: reiniciada pelo testador`);
 }
 
-async function processar(conversa: CwConversation, mensagens: CwMessage[]): Promise<void> {
+async function processar(conversa: CwConversation, mensagens: CwMessage[], bot: IdentidadeBot): Promise<void> {
   const conversaId = conversa.id;
   const estado = lerEstado(conversa);
 
-  const turnos = mensagens.map(turnoDe).filter((t): t is Turno => t !== null);
+  const turnos = mensagens.map((m) => turnoDe(m, bot)).filter((t): t is Turno => t !== null);
   const historico = desdeUltimoReinicio(turnos).slice(-30);
   if (!historico.length) return;
 
@@ -55,7 +74,13 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[]): Prom
   // gravado, para tirar a etiqueta continuar valendo mesmo se o status ficar inconsistente.
   const etiquetasAtuais = await chatwoot.listarEtiquetas(conversaId);
   const jaRespondeuAntes = historico.some((t) => t.autor === 'alex');
-  const decisao = decidirControleIA(estado.status_agente, etiquetasAtuais, jaRespondeuAntes);
+  // Cliente clicou no anúncio de novo? Isso reabre a conversa para o Alex, a não ser que um
+  // humano esteja falando com ele agora.
+  const ultimaDoCliente = [...mensagens].reverse().find((m) => ehEntrada(m.message_type) && !m.private);
+  const cliqueDeAnuncio =
+    ehMensagemDeAnuncio(ultimaDoCliente?.content ?? '') &&
+    !humanoFalouNosUltimos(mensagens, bot, MINUTOS_DE_RESPEITO_AO_HUMANO);
+  const decisao = decidirControleIA(estado.status_agente, etiquetasAtuais, jaRespondeuAntes, cliqueDeAnuncio);
 
   if (!decisao.seguir) {
     if (decisao.registrarParada) await pararIA(conversaId);
@@ -65,7 +90,9 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[]): Prom
   if (decisao.aplicarTag) await chatwoot.aplicarEtiquetas(conversaId, comEtiqueta(etiquetasAtuais, TAG_ATENDIMENTO_IA));
   if (decisao.ativar) {
     await chatwoot.gravarAtributos(conversaId, { status_agente: 'ativo' });
-    if (estado.status_agente === 'aguardando_humano') log.info(`conversa ${conversaId}: etiqueta de volta, Alex retomou`);
+    if (estado.status_agente === 'aguardando_humano') {
+      log.info(`conversa ${conversaId}: Alex retomou (${cliqueDeAnuncio ? 'novo clique no anúncio' : 'etiqueta de volta'})`);
+    }
   }
 
   const valoresDoCliente = historico
@@ -130,8 +157,11 @@ export async function tratarEvento(evento: Record<string, any>): Promise<void> {
   const inboxDoEvento = String(evento.conversation?.inbox_id ?? evento.inbox?.id ?? '');
   if (inboxes.length && !inboxes.includes(inboxDoEvento)) return;
 
+  const bot = await identidadeDoBot();
   const doCliente = ehEntrada(evento.message_type);
-  const doVendedor = ehSaida(evento.message_type) && evento.sender?.type === 'user';
+  // Qualquer saída que não seja do nosso bot é gente: agente do Chatwoot ou o vendedor
+  // digitando no celular (que chega com o token de outro agent_bot).
+  const doVendedor = ehSaida(evento.message_type) && !ehNossoBot(evento.sender, bot);
   if (!doCliente && !doVendedor) return;
 
   // Allowlist ANTES de qualquer escrita ou espera. Rodando na inbox de produção, conversa de
@@ -165,5 +195,5 @@ export async function tratarEvento(evento: Record<string, any>): Promise<void> {
     return;
   }
 
-  await processar(atual, mensagens);
+  await processar(atual, mensagens, bot);
 }

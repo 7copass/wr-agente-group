@@ -48,7 +48,25 @@ function tokenDoBot(): string {
   return env.chatwoot.botToken;
 }
 
+/** Descobre o id do nosso próprio agent_bot cruzando o token configurado com os bots da conta. */
+let idBotCache: number | null | undefined;
+
 export const chatwoot = {
+  /**
+   * Sem isto não dá para distinguir uma mensagem nossa de uma mensagem publicada com o token
+   * de outro bot (é assim que chegam as respostas que o vendedor digita no celular).
+   */
+  identificarBot: async (): Promise<number | null> => {
+    if (idBotCache !== undefined) return idBotCache;
+    try {
+      const bots = await call<{ id: number; access_token?: string }[]>('/agent_bots');
+      idBotCache = bots.find((b) => b.access_token && b.access_token === env.chatwoot.botToken)?.id ?? null;
+    } catch {
+      idBotCache = null;
+    }
+    return idBotCache;
+  },
+
   obterConversa: (id: number) => call<CwConversation>(`/conversations/${id}`),
 
   listarMensagens: (id: number) =>

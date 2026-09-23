@@ -46,7 +46,8 @@ WhatsApp ─ Evolution API (ou QuePasa) ─ Chatwoot ─ webhook ─► serviço
 | `src/handoff.ts` | resumo em nota privada, status e atribuição |
 | `src/expediente.ts` | horário local de Santarém (a inbox está em UTC) |
 | `src/webhook.ts` | orquestra: autenticação, filtro, debounce sem estado, modelo, guardrail, envio |
-| `src/historico.ts` | converte mensagens do Chatwoot em turnos; `/reiniciar` |
+| `src/historico.ts` | turnos, identidade do bot, `/reiniciar`, detecção de lead de anúncio |
+| `src/controle-ia.ts` | decide, a cada mensagem, se o Alex segue (etiqueta manda) |
 | `src/notificacao.ts` | avisa o vendedor por WhatsApp quando um lead é qualificado |
 | `src/telefone.ts` | comparação de números BR (+55 e nono dígito) para a allowlist |
 | `api/` | funções da Vercel |
@@ -124,6 +125,21 @@ Enquanto estiverem «a confirmar», o guardrail impede o agente de usá-las e el
     encontrado, não uma mudança feita nesta sessão. Confirmado por evidência indireta: 10 das
     20 conversas mais recentes tiveram resposta do Alex no mesmo dia, com handoff correto para
     humano.
+
+## Descobertas de produção (2026-09-23, noite)
+
+17. **O vendedor respondendo pelo celular não chega como usuário do Chatwoot.** A ponte
+    publica essas mensagens com o token de OUTRO agent_bot (id 25). O Alex não percebia que
+    um humano tinha entrado, falava por cima e ainda lia a fala do vendedor como se fosse
+    dele. Agora qualquer saída que não seja do nosso bot conta como humano — a identidade do
+    nosso bot é resolvida cruzando `CHATWOOT_BOT_TOKEN` com a lista de agent_bots da conta.
+18. **Clique novo no anúncio reabre a conversa.** Um lead que já tinha sido repassado e
+    clicava no anúncio de novo caía em silêncio (aconteceu 3× na conversa 1097). Agora um
+    bloco de lead de anúncio faz o Alex retomar, a menos que algum humano tenha falado com o
+    cliente nos últimos 30 minutos.
+19. **O agente antigo (bot 25) ainda estava respondendo** às 19:01 e 20:01 do dia 23/09,
+    depois de informado como desativado. Enquanto os dois rodarem na mesma inbox, existe
+    risco de resposta dupla.
 
 ## Pendência não corrigida
 
