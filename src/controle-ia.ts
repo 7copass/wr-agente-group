@@ -2,42 +2,52 @@ import { TAG_ATENDIMENTO_IA } from './etiquetas.js';
 
 export type DecisaoControle =
   | { seguir: true; ativar: boolean; aplicarTag: boolean }
-  | { seguir: false; registrarParada: boolean };
+  | { seguir: false; novoStatus?: 'aguardando_humano' | 'desligado' };
+
+export interface SituacaoConversa {
+  statusAgente: string | undefined;
+  etiquetas: string[];
+  /** O Alex já respondeu nesta janela de conversa (desde o último /reiniciar). */
+  jaRespondeuAntes: boolean;
+  /** Algum humano falou com o cliente há pouco tempo — então ele está no comando agora. */
+  humanoFalouRecentemente: boolean;
+}
 
 /**
- * A etiqueta atendimento_ia é o controle manual do time, conferido a cada mensagem — não só
- * na primeira vez. Sem isso, depois que o Alex parasse uma vez (por qualquer motivo:
- * handoff, tag removida, humano respondeu), a checagem antiga de status nunca mais deixava
- * a etiqueta ser reavaliada, e adicionar a tag de volta não tinha efeito nenhum — foi
- * exatamente o bug relatado pelo usuário.
+ * Decide, a cada mensagem do cliente, se o Alex responde.
  *
- * Regra: sem a tag, o Alex não responde, não importa por que parou antes. Com a tag, ele
- * responde — inclusive retomando uma conversa que ele mesmo tinha soltado. "encerrado" é a
- * única exceção definitiva (hoje nada do código ainda grava esse status).
+ * Duas coisas o calam, e elas são diferentes de propósito:
+ *   - o time tirar a etiqueta atendimento_ia (status "desligado"): decisão explícita de gente,
+ *     só volta quando alguém repuser a etiqueta;
+ *   - o Alex ter repassado, ou um humano ter respondido ("aguardando_humano"): o humano tem a
+ *     preferência enquanto estiver ali, mas se ele sumir e o cliente continuar falando, o Alex
+ *     volta — senão o cliente fica conversando sozinho, que é exatamente o problema que este
+ *     projeto existe para resolver.
  */
-export function decidirControleIA(
-  statusAgente: string | undefined,
-  etiquetas: string[],
-  jaRespondeuAntes: boolean,
-  cliqueDeAnuncio = false,
-): DecisaoControle {
-  if (statusAgente === 'encerrado') return { seguir: false, registrarParada: false };
+export function decidirControleIA(s: SituacaoConversa): DecisaoControle {
+  const temTag = s.etiquetas.includes(TAG_ATENDIMENTO_IA);
 
-  const temTag = etiquetas.includes(TAG_ATENDIMENTO_IA);
+  if (s.statusAgente === 'encerrado') return { seguir: false };
 
-  // Um clique novo no anúncio é um lead pago chegando agora, mesmo que a conversa já tenha
-  // sido repassada antes. Ficar calado nesse caso é o pior resultado possível, então o Alex
-  // retoma. Quem chama só marca isto como true se nenhum humano falou com o cliente há pouco.
-  if (cliqueDeAnuncio) return { seguir: true, ativar: true, aplicarTag: !temTag };
-  // "Já começou" não é só olhar o status gravado — que pode ter sido zerado por engano (já
-  // aconteceu num teste) ou por /reiniciar — mas também se o Alex já respondeu nesta janela
-  // de conversa. Assim, tirar a tag é respeitado mesmo se o status ficou inconsistente.
-  const jaComecou = Boolean(statusAgente) || jaRespondeuAntes;
+  // Desligado pelo time: só a etiqueta traz de volta.
+  if (s.statusAgente === 'desligado') {
+    return temTag ? { seguir: true, ativar: true, aplicarTag: false } : { seguir: false };
+  }
 
-  if (!jaComecou) return { seguir: true, ativar: true, aplicarTag: !temTag };
-  if (!temTag) return { seguir: false, registrarParada: statusAgente !== 'aguardando_humano' };
-  if (statusAgente === 'aguardando_humano') return { seguir: true, ativar: true, aplicarTag: false };
-  return { seguir: true, ativar: false, aplicarTag: false };
+  // Conversa nova de verdade: assume e marca com a etiqueta.
+  if (!s.statusAgente && !s.jaRespondeuAntes) {
+    return { seguir: true, ativar: true, aplicarTag: !temTag };
+  }
+
+  // Repassado ou humano respondeu: o humano manda enquanto estiver presente.
+  if (s.statusAgente === 'aguardando_humano') {
+    if (s.humanoFalouRecentemente) return { seguir: false };
+    return { seguir: true, ativar: true, aplicarTag: !temTag };
+  }
+
+  // Sobrou: conversa já em andamento. Sem etiqueta aqui significa que alguém a tirou.
+  if (!temTag) return { seguir: false, novoStatus: 'desligado' };
+  return { seguir: true, ativar: s.statusAgente !== 'ativo', aplicarTag: false };
 }
 
 export { TAG_ATENDIMENTO_IA };

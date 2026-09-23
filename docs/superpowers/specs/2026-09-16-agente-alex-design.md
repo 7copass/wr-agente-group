@@ -141,6 +141,18 @@ Enquanto estiverem «a confirmar», o guardrail impede o agente de usá-las e el
     depois de informado como desativado. Enquanto os dois rodarem na mesma inbox, existe
     risco de resposta dupla.
 
+20. **O repasse era cedo demais.** Qualquer pergunta que o Alex não podia responder (taxa,
+    desconto, valor fora da tabela) encerrava a participação dele, e como ele nunca voltava, o
+    cliente ficava sem ninguém: 129 mensagens de cliente sem resposta em 23/09, quase todas em
+    conversas com `status_agente = aguardando_humano`. Agora ele só repassa quando o filtro
+    está completo (os 5 campos, com a ficha indo para o WhatsApp do vendedor) ou quando o
+    cliente pede uma pessoa. Barrar uma resposta virou desvio: ele diz que o consultor confirma
+    depois e continua perguntando o que falta.
+21. **O Alex volta se o humano sumir.** `aguardando_humano` (repasse ou humano respondeu) deixou
+    de ser definitivo: se o cliente continuar falando e nenhum humano responder por 30 minutos,
+    ele reassume. Quem desliga de verdade é o time, tirando a etiqueta — isso grava o status
+    `desligado`, que só a etiqueta de volta reverte.
+
 ## Pendência não corrigida
 
 Mensagem sem texto (só áudio ou imagem) não gera resposta: `turnoDe` descarta turnos com

@@ -6,6 +6,13 @@ export const AVISO_HANDOFF =
 export const AVISO_HANDOFF_FORA =
   'Já deixei tudo anotado para o nosso consultor. Ele dá continuidade ao seu atendimento assim que estiver disponível 😊';
 
+/**
+ * Usado quando o guardrail barra a resposta mas o Alex CONTINUA no atendimento: ele desvia do
+ * que não pode responder e segue o filtro, em vez de largar o lead com o humano.
+ */
+export const DESVIO_SEM_REPASSE =
+  'Esse detalhe eu prefiro confirmar com um consultor para não te passar nada errado 😊';
+
 export const AVISO_BLOQUEIO =
   'Essa parte eu prefiro confirmar com um consultor para não te passar nada errado. Vou te encaminhar agora, só um momento 😊';
 

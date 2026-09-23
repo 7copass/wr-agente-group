@@ -70,3 +70,9 @@ test('valoresCitadosPelo captura o que o cliente falou', () => {
   assert.deepEqual(valoresCitadosPelo('consigo pagar 850 por mês'), [850]);
   assert.ok(valoresCitadosPelo('tenho 14 mil de entrada').includes(14000));
 });
+
+test('"R$ 10 mil" vale 10000, não 10 (falso positivo que barrava resposta boa)', () => {
+  assert.equal(ok('Com R$ 10 mil de entrada dá para usar como lance.'), false, 'sem o cliente ter citado, segue barrado');
+  assert.ok(ok('Com R$ 10 mil de entrada dá para usar como lance.', [10000]), 'cliente citou 10 mil: pode ecoar');
+  assert.ok(ok('A carta de R$ 80 mil sai em 100x de R$ 727,89.'), 'R$ 80 mil é o crédito de 80.000 da tabela');
+});

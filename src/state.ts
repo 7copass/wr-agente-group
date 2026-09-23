@@ -17,7 +17,13 @@ export type Campo = (typeof CAMPOS)[number];
 /** Os 5 da seção 6.4: é o mínimo para o lead ser considerado quente e ir ao vendedor. */
 export const CAMPOS_HANDOFF: Campo[] = ['nome', 'cidade', 'veiculo_interesse', 'faixa_parcela', 'tem_entrada'];
 
-export type StatusAgente = 'ativo' | 'aguardando_humano' | 'encerrado';
+/**
+ * ativo              — Alex conduzindo.
+ * aguardando_humano  — Alex repassou, ou um humano respondeu. Ele volta se o humano sumir.
+ * desligado          — o time tirou a etiqueta. Só volta se alguém puser a etiqueta de novo.
+ * encerrado          — fim definitivo (nada grava este status ainda).
+ */
+export type StatusAgente = 'ativo' | 'aguardando_humano' | 'desligado' | 'encerrado';
 
 export type Estado = Partial<Record<Campo, string>> & {
   status_agente?: StatusAgente;

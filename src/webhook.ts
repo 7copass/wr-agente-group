@@ -2,19 +2,18 @@ import { timingSafeEqual } from 'node:crypto';
 import { env } from './env.js';
 import { chatwoot, type CwConversation, type CwMessage } from './chatwoot.js';
 import { ofertas, limites, persona } from './config.js';
-import { CAMPOS, lerEstado, prontoParaHandoff, type Estado } from './state.js';
+import { CAMPOS, faltando, lerEstado, prontoParaHandoff, type Estado } from './state.js';
 import { responder } from './brain.js';
 import { verificarSaida, valoresCitadosPelo } from './guardrails.js';
 import { foraDoExpediente } from './expediente.js';
 import { escalar, pararIA } from './handoff.js';
 import { notificarLeadQualificado } from './notificacao.js';
 import { log } from './log.js';
-import { AVISO_BLOQUEIO, AVISO_BLOQUEIO_FORA, textoDeRepasse } from './mensagens.js';
+import { DESVIO_SEM_REPASSE, textoDeRepasse } from './mensagens.js';
 import { numeroPermitido } from './telefone.js';
 import {
   desdeUltimoReinicio,
   ehEntrada,
-  ehMensagemDeAnuncio,
   ehNossoBot,
   ehReinicio,
   ehSaida,
@@ -73,25 +72,27 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[], bot: 
   // "Já respondeu antes" olha o histórico (desde o último /reiniciar) em vez de só o status
   // gravado, para tirar a etiqueta continuar valendo mesmo se o status ficar inconsistente.
   const etiquetasAtuais = await chatwoot.listarEtiquetas(conversaId);
-  const jaRespondeuAntes = historico.some((t) => t.autor === 'alex');
-  // Cliente clicou no anúncio de novo? Isso reabre a conversa para o Alex, a não ser que um
-  // humano esteja falando com ele agora.
-  const ultimaDoCliente = [...mensagens].reverse().find((m) => ehEntrada(m.message_type) && !m.private);
-  const cliqueDeAnuncio =
-    ehMensagemDeAnuncio(ultimaDoCliente?.content ?? '') &&
-    !humanoFalouNosUltimos(mensagens, bot, MINUTOS_DE_RESPEITO_AO_HUMANO);
-  const decisao = decidirControleIA(estado.status_agente, etiquetasAtuais, jaRespondeuAntes, cliqueDeAnuncio);
+  const humanoFalouRecentemente = humanoFalouNosUltimos(mensagens, bot, MINUTOS_DE_RESPEITO_AO_HUMANO);
+  const decisao = decidirControleIA({
+    statusAgente: estado.status_agente,
+    etiquetas: etiquetasAtuais,
+    jaRespondeuAntes: historico.some((t) => t.autor === 'alex'),
+    humanoFalouRecentemente,
+  });
 
   if (!decisao.seguir) {
-    if (decisao.registrarParada) await pararIA(conversaId);
-    log.info(`conversa ${conversaId} ignorada: sem a etiqueta ${TAG_ATENDIMENTO_IA} (status ${estado.status_agente ?? '—'})`);
+    if (decisao.novoStatus && decisao.novoStatus !== estado.status_agente) {
+      await chatwoot.gravarAtributos(conversaId, { status_agente: decisao.novoStatus });
+    }
+    const motivo = humanoFalouRecentemente ? 'humano atendendo agora' : `status ${estado.status_agente ?? '—'} / sem a etiqueta`;
+    log.info(`conversa ${conversaId} ignorada: ${motivo}`);
     return;
   }
   if (decisao.aplicarTag) await chatwoot.aplicarEtiquetas(conversaId, comEtiqueta(etiquetasAtuais, TAG_ATENDIMENTO_IA));
   if (decisao.ativar) {
     await chatwoot.gravarAtributos(conversaId, { status_agente: 'ativo' });
     if (estado.status_agente === 'aguardando_humano') {
-      log.info(`conversa ${conversaId}: Alex retomou (${cliqueDeAnuncio ? 'novo clique no anúncio' : 'etiqueta de volta'})`);
+      log.info(`conversa ${conversaId}: Alex retomou — cliente falou e nenhum humano respondeu há ${MINUTOS_DE_RESPEITO_AO_HUMANO} min`);
     }
   }
 
@@ -119,13 +120,23 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[], bot: 
   const veredito = verificarSaida(r.resposta, ofertas, limites, valoresDoCliente);
 
   if (!veredito.ok) {
+    // Barrar a resposta NÃO é motivo para largar o lead: o Alex desvia do que não pode dizer
+    // e continua o filtro. Só o lead pronto (ou pedido explícito de humano) faz o repasse.
     log.warn(`resposta bloqueada na conversa ${conversaId}: ${veredito.motivo}`);
     await chatwoot.enviarNotaPrivada(
       conversaId,
       `*Alex bloqueou a própria resposta*\nMotivo: ${veredito.motivo}\nTexto barrado: ${r.resposta}`,
     );
-    await enviar(conversaId, fora ? AVISO_BLOQUEIO_FORA : AVISO_BLOQUEIO);
-    await escalar(conversaId, veredito.motivo ?? 'guardrail', atualizado, telefone, !fora);
+    const pendente = faltando(atualizado)[0];
+    if (!pendente) {
+      // O lead ficou completo justamente nesta mensagem: desvia do que foi barrado, mas
+      // entrega o lead assim mesmo em vez de perder o repasse por causa do bloqueio.
+      await enviar(conversaId, textoDeRepasse(DESVIO_SEM_REPASSE, fora));
+      await escalar(conversaId, 'lead qualificado (resposta barrada pelo guardrail)', atualizado, telefone, !fora);
+      await notificarLeadQualificado(atualizado, telefone, conversaId);
+      return;
+    }
+    await enviar(conversaId, [DESVIO_SEM_REPASSE, persona.perguntas_por_campo?.[pendente]].filter(Boolean).join(' '));
     return;
   }
 

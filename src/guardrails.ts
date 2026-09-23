@@ -44,8 +44,9 @@ export function verificarSaida(
 
   const permitidos = valoresPermitidos(o, valoresDoCliente);
 
-  for (const m of texto.matchAll(/R\$\s*(\d[\d.]*(?:,\d{1,2})?)/gi)) {
-    const v = parseValor(m[1]);
+  // O "mil" precisa entrar na conta: "R$ 10 mil" é 10000, não 10.
+  for (const m of texto.matchAll(/R\$\s*(\d[\d.]*(?:,\d{1,2})?)(\s*mil\b)?/gi)) {
+    const v = parseValor(m[1]) * (m[2] ? 1000 : 1);
     if (!Number.isFinite(v)) return { ok: false, motivo: `valor ilegível: ${m[0]}` };
     if (!permitidos.has(v)) return { ok: false, motivo: `${m[0]} não está na tabela de ofertas` };
   }

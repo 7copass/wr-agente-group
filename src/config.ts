@@ -33,6 +33,7 @@ export interface Persona {
     max_perguntas_por_mensagem: number;
   };
   evitar_frases: string[];
+  perguntas_por_campo?: Record<string, string>;
   aviso_ia_curto: string;
   aviso_lgpd_completo: string;
   primeira_mensagem: { anuncio: string; organico: string };

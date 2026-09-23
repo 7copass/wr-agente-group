@@ -23,6 +23,14 @@ evitar_frases:
   - "para eu estar"
   - "vou estar passando"
 
+# Usadas quando o Alex precisa desviar de um assunto e continuar o filtro.
+perguntas_por_campo:
+  nome: "Antes, como é seu nome?"
+  cidade: "Você é de qual cidade?"
+  veiculo_interesse: "Qual veículo você tem em mente?"
+  faixa_parcela: "Qual valor de parcela caberia no seu mês?"
+  tem_entrada: "Você tem algum valor para dar de entrada ou usar como lance?"
+
 aviso_ia_curto: "Sou o Alex, assistente virtual da WR 🤖"
 aviso_lgpd_completo: >-
   Este atendimento é feito por inteligência artificial. As informações desta conversa
