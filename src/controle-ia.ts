@@ -15,11 +15,18 @@ export type DecisaoControle =
  * responde — inclusive retomando uma conversa que ele mesmo tinha soltado. "encerrado" é a
  * única exceção definitiva (hoje nada do código ainda grava esse status).
  */
-export function decidirControleIA(statusAgente: string | undefined, etiquetas: string[]): DecisaoControle {
+export function decidirControleIA(
+  statusAgente: string | undefined,
+  etiquetas: string[],
+  jaRespondeuAntes: boolean,
+): DecisaoControle {
   if (statusAgente === 'encerrado') return { seguir: false, registrarParada: false };
 
   const temTag = etiquetas.includes(TAG_ATENDIMENTO_IA);
-  const jaComecou = Boolean(statusAgente);
+  // "Já começou" não é só olhar o status gravado — que pode ter sido zerado por engano (já
+  // aconteceu num teste) ou por /reiniciar — mas também se o Alex já respondeu nesta janela
+  // de conversa. Assim, tirar a tag é respeitado mesmo se o status ficou inconsistente.
+  const jaComecou = Boolean(statusAgente) || jaRespondeuAntes;
 
   if (!jaComecou) return { seguir: true, ativar: true, aplicarTag: !temTag };
   if (!temTag) return { seguir: false, registrarParada: statusAgente !== 'aguardando_humano' };

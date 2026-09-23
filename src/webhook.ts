@@ -44,11 +44,18 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[]): Prom
   const conversaId = conversa.id;
   const estado = lerEstado(conversa);
 
+  const turnos = mensagens.map(turnoDe).filter((t): t is Turno => t !== null);
+  const historico = desdeUltimoReinicio(turnos).slice(-30);
+  if (!historico.length) return;
+
   // A etiqueta atendimento_ia é o controle manual do time, conferido a cada mensagem — não
   // só na primeira. Sem ela o Alex não responde, mesmo que já tenha parado antes por outro
   // motivo; com ela, ele responde, inclusive retomando uma conversa que já tinha soltado.
+  // "Já respondeu antes" olha o histórico (desde o último /reiniciar) em vez de só o status
+  // gravado, para tirar a etiqueta continuar valendo mesmo se o status ficar inconsistente.
   const etiquetasAtuais = await chatwoot.listarEtiquetas(conversaId);
-  const decisao = decidirControleIA(estado.status_agente, etiquetasAtuais);
+  const jaRespondeuAntes = historico.some((t) => t.autor === 'alex');
+  const decisao = decidirControleIA(estado.status_agente, etiquetasAtuais, jaRespondeuAntes);
 
   if (!decisao.seguir) {
     if (decisao.registrarParada) await pararIA(conversaId);
@@ -60,10 +67,6 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[]): Prom
     await chatwoot.gravarAtributos(conversaId, { status_agente: 'ativo' });
     if (estado.status_agente === 'aguardando_humano') log.info(`conversa ${conversaId}: etiqueta de volta, Alex retomou`);
   }
-
-  const turnos = mensagens.map(turnoDe).filter((t): t is Turno => t !== null);
-  const historico = desdeUltimoReinicio(turnos).slice(-30);
-  if (!historico.length) return;
 
   const valoresDoCliente = historico
     .filter((t) => t.autor === 'cliente')
