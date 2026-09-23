@@ -6,12 +6,13 @@ import { CAMPOS, lerEstado, prontoParaHandoff, type Estado } from './state.js';
 import { responder } from './brain.js';
 import { verificarSaida, valoresCitadosPelo } from './guardrails.js';
 import { foraDoExpediente } from './expediente.js';
-import { escalar } from './handoff.js';
+import { escalar, pararIA } from './handoff.js';
 import { notificarLeadQualificado } from './notificacao.js';
 import { log } from './log.js';
 import { AVISO_BLOQUEIO, AVISO_BLOQUEIO_FORA, textoDeRepasse } from './mensagens.js';
 import { numeroPermitido } from './telefone.js';
 import { desdeUltimoReinicio, ehEntrada, ehReinicio, ehSaida, turnoDe, type Turno } from './historico.js';
+import { TAG_ATENDIMENTO_IA, comEtiqueta } from './etiquetas.js';
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -47,6 +48,19 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[]): Prom
     return;
   }
 
+  // A etiqueta atendimento_ia é o controle manual do time: aplicada na primeira mensagem,
+  // sua ausência depois disso significa que alguém tirou e o Alex deve parar.
+  const etiquetasAtuais = await chatwoot.listarEtiquetas(conversaId);
+  if (!estado.status_agente) {
+    await chatwoot.gravarAtributos(conversaId, { status_agente: 'ativo' });
+    const comTag = comEtiqueta(etiquetasAtuais, TAG_ATENDIMENTO_IA);
+    if (comTag.length !== etiquetasAtuais.length) await chatwoot.aplicarEtiquetas(conversaId, comTag);
+  } else if (!etiquetasAtuais.includes(TAG_ATENDIMENTO_IA)) {
+    await pararIA(conversaId);
+    log.info(`conversa ${conversaId}: etiqueta ${TAG_ATENDIMENTO_IA} removida pelo time, Alex parou`);
+    return;
+  }
+
   const turnos = mensagens.map(turnoDe).filter((t): t is Turno => t !== null);
   const historico = desdeUltimoReinicio(turnos).slice(-30);
   if (!historico.length) return;
@@ -65,7 +79,11 @@ async function processar(conversa: CwConversation, mensagens: CwMessage[]): Prom
     if (typeof v === 'string' && v.trim()) novos[k] = v.trim();
   }
   if (Object.keys(novos).length) await chatwoot.gravarAtributos(conversaId, novos);
-  if (r.etiqueta) await chatwoot.aplicarEtiquetas(conversaId, [r.etiqueta]);
+  if (r.etiqueta) {
+    const atual = await chatwoot.listarEtiquetas(conversaId);
+    const comCategoria = comEtiqueta(atual, r.etiqueta);
+    if (comCategoria.length !== atual.length) await chatwoot.aplicarEtiquetas(conversaId, comCategoria);
+  }
 
   const atualizado: Estado = { ...estado, ...novos };
   const veredito = verificarSaida(r.resposta, ofertas, limites, valoresDoCliente);
@@ -119,7 +137,7 @@ export async function tratarEvento(evento: Record<string, any>): Promise<void> {
   if (!numeroPermitido(conversa.meta?.sender?.phone_number, env.allowlist)) return;
 
   if (doVendedor) {
-    await chatwoot.gravarAtributos(conversaId, { status_agente: 'aguardando_humano' });
+    await pararIA(conversaId);
     log.info(`conversa ${conversaId}: humano assumiu, Alex silenciado`);
     return;
   }

@@ -68,14 +68,27 @@ export const chatwoot = {
       tokenDoBot(),
     ),
 
-  gravarAtributos: (id: number, atributos: Record<string, unknown>) =>
-    call(`/conversations/${id}/custom_attributes`, {
+  /**
+   * O endpoint de custom_attributes do Chatwoot SUBSTITUI o objeto inteiro a cada chamada —
+   * não soma. Por isso lê o estado atual antes de gravar, para nunca apagar um campo que uma
+   * chamada anterior (ou outro sistema) já tinha gravado.
+   */
+  gravarAtributos: async (id: number, atributos: Record<string, unknown>) => {
+    const atual = await call<CwConversation>(`/conversations/${id}`);
+    const mesclado = { ...(atual.custom_attributes ?? {}), ...atributos };
+    return call(`/conversations/${id}/custom_attributes`, {
       method: 'POST',
-      body: JSON.stringify({ custom_attributes: atributos }),
-    }),
+      body: JSON.stringify({ custom_attributes: mesclado }),
+    });
+  },
 
+  // O Chatwoot SUBSTITUI a lista inteira a cada chamada; use src/etiquetas.ts para não apagar
+  // etiquetas de outra origem ao adicionar ou remover só uma.
   aplicarEtiquetas: (id: number, etiquetas: string[]) =>
     call(`/conversations/${id}/labels`, { method: 'POST', body: JSON.stringify({ labels: etiquetas }) }),
+
+  listarEtiquetas: (id: number) =>
+    call<{ payload: string[] }>(`/conversations/${id}/labels`).then((r) => r.payload ?? []),
 
   /** Com bot na inbox a conversa nasce "pendente" e fica escondida dos vendedores até ser aberta. */
   abrirConversa: (id: number) =>

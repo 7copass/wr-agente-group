@@ -2,6 +2,7 @@ import { chatwoot } from './chatwoot.js';
 import { env } from './env.js';
 import { vendedores } from './config.js';
 import type { Estado } from './state.js';
+import { TAG_ATENDIMENTO_IA, semEtiqueta } from './etiquetas.js';
 
 const rotulos: Record<string, string> = {
   nome: 'Nome',
@@ -55,6 +56,17 @@ export function proximoResponsavel(): number {
   return escolhido;
 }
 
+/**
+ * Marca que a IA parou de atender: grava o status e tira a etiqueta atendimento_ia (sem
+ * apagar as demais). Chamado tanto quando o Alex escala quanto quando um humano assume.
+ */
+export async function pararIA(conversaId: number): Promise<void> {
+  await chatwoot.gravarAtributos(conversaId, { status_agente: 'aguardando_humano' });
+  const atuais = await chatwoot.listarEtiquetas(conversaId);
+  const semTag = semEtiqueta(atuais, TAG_ATENDIMENTO_IA);
+  if (semTag.length !== atuais.length) await chatwoot.aplicarEtiquetas(conversaId, semTag);
+}
+
 export async function escalar(
   conversaId: number,
   motivo: string,
@@ -63,7 +75,7 @@ export async function escalar(
   atribuir: boolean,
 ): Promise<void> {
   await chatwoot.enviarNotaPrivada(conversaId, montarResumo(estado, telefone, motivo, linkDaConversa(conversaId)));
-  await chatwoot.gravarAtributos(conversaId, { status_agente: 'aguardando_humano' });
+  await pararIA(conversaId);
   await chatwoot.abrirConversa(conversaId);
   if (atribuir) await chatwoot.atribuir(conversaId, proximoResponsavel());
 }
